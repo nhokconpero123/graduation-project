@@ -1,8 +1,9 @@
-import { useState, Suspense } from 'react';
+import { useEffect, useRef, useState, Suspense } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { OrbitControls, Environment } from '@react-three/drei';
 import { motion } from 'framer-motion';
-import { AlertCircle, Loader } from 'lucide-react';
+import { AlertCircle, Loader, Maximize2, Minimize2, Pause, Play, RotateCcw } from 'lucide-react';
+import { MOUSE } from 'three';
 import ChampionModel from './ChampionModel3D';
 
 interface Champion3DModelProps {
@@ -39,6 +40,32 @@ const Champion3DModel = ({ name, modelUrl }: Champion3DModelProps) => {
   const [hasError, setHasError] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [key, setKey] = useState(0);
+  const [animations, setAnimations] = useState<string[]>([]);
+  const [animationName, setAnimationName] = useState('');
+  const [isAnimationPlaying, setIsAnimationPlaying] = useState(true);
+  const [isAnimationLooping, setIsAnimationLooping] = useState(true);
+  const [animationSpeed, setAnimationSpeed] = useState(1);
+  const [autoRotate, setAutoRotate] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const viewerRef = useRef<HTMLDivElement>(null);
+  const controlsRef = useRef<{ reset: () => void }>(null);
+
+  useEffect(() => {
+    setAnimations([]);
+    setAnimationName('');
+    setIsAnimationPlaying(true);
+  }, [modelUrl]);
+
+  useEffect(() => {
+    if (!animations.length) return;
+    setAnimationName((current) => animations.includes(current) ? current : animations[0]);
+  }, [animations]);
+
+  useEffect(() => {
+    const handleFullscreenChange = () => setIsFullscreen(document.fullscreenElement === viewerRef.current);
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
+  }, []);
 
   const handleRetry = () => {
     setHasError(false);
@@ -50,6 +77,15 @@ const Champion3DModel = ({ name, modelUrl }: Champion3DModelProps) => {
     console.error(`Failed to load model: ${modelUrl}`);
     setHasError(true);
     setIsLoading(false);
+  };
+
+  const toggleFullscreen = async () => {
+    if (!viewerRef.current) return;
+    if (document.fullscreenElement) {
+      await document.exitFullscreen();
+    } else {
+      await viewerRef.current.requestFullscreen();
+    }
   };
 
   if (hasError) {
@@ -65,7 +101,11 @@ const Champion3DModel = ({ name, modelUrl }: Champion3DModelProps) => {
   }
 
   return (
-    <div className="relative h-[500px] rounded-lg overflow-hidden bg-black">
+    <div
+      ref={viewerRef}
+      className={`relative rounded-lg overflow-hidden bg-black ${isFullscreen ? 'h-screen w-screen' : 'h-[500px]'}`}
+      onContextMenu={(event) => event.preventDefault()}
+    >
       <Canvas
         key={key}
         camera={{ position: [0, 2, 5], fov: 45 }}
@@ -87,18 +127,102 @@ const Champion3DModel = ({ name, modelUrl }: Champion3DModelProps) => {
           <Environment preset="city" />
           <ChampionModel
             modelUrl={modelUrl}
+            animationName={animationName}
+            animationSpeed={animationSpeed}
+            isAnimationPlaying={isAnimationPlaying}
+            isAnimationLooping={isAnimationLooping}
+            onAnimationsChange={setAnimations}
             onError={handleError}
             onLoadingChange={setIsLoading}
           />
           <OrbitControls
-            enablePan={false}
+            ref={controlsRef}
+            enablePan={true}
             enableZoom={true}
+            autoRotate={autoRotate}
+            autoRotateSpeed={1.5}
+            screenSpacePanning={true}
+            mouseButtons={{
+              LEFT: MOUSE.ROTATE,
+              MIDDLE: MOUSE.PAN,
+              RIGHT: MOUSE.ROTATE
+            }}
             minPolarAngle={Math.PI / 4}
             maxPolarAngle={Math.PI / 2}
           />
         </Suspense>
       </Canvas>
       {isLoading && <LoadingFallback />}
+
+      <div className="absolute bottom-4 left-4 right-4 flex flex-wrap items-center gap-2 rounded-lg bg-black/70 p-3 backdrop-blur-sm">
+        <button
+          type="button"
+          onClick={() => controlsRef.current?.reset()}
+          aria-label="Reset camera"
+          title="Reset camera"
+          className="rounded-md bg-[#2A2F4C] p-2 text-white hover:bg-[#C89B3C] hover:text-black"
+        >
+          <RotateCcw className="h-4 w-4" />
+        </button>
+        <button
+          type="button"
+          onClick={() => setAutoRotate((current) => !current)}
+          aria-pressed={autoRotate}
+          className={`rounded-md px-3 py-2 text-sm ${autoRotate ? 'bg-[#C89B3C] text-black' : 'bg-[#2A2F4C] text-white'}`}
+        >
+          Auto rotate
+        </button>
+        {animations.length > 0 && (
+          <>
+            <select
+              value={animationName}
+              onChange={(event) => setAnimationName(event.target.value)}
+              aria-label="Select animation"
+              className="max-w-40 rounded-md bg-[#2A2F4C] px-2 py-2 text-sm text-white"
+            >
+              {animations.map((animation) => <option key={animation}>{animation}</option>)}
+            </select>
+            <button
+              type="button"
+              onClick={() => setIsAnimationPlaying((current) => !current)}
+              aria-label={isAnimationPlaying ? 'Pause animation' : 'Play animation'}
+              title={isAnimationPlaying ? 'Pause animation' : 'Play animation'}
+              className="rounded-md bg-[#2A2F4C] p-2 text-white hover:bg-[#C89B3C] hover:text-black"
+            >
+              {isAnimationPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
+            </button>
+            <button
+              type="button"
+              onClick={() => setIsAnimationLooping((current) => !current)}
+              aria-pressed={isAnimationLooping}
+              className={`rounded-md px-3 py-2 text-sm ${isAnimationLooping ? 'bg-[#C89B3C] text-black' : 'bg-[#2A2F4C] text-white'}`}
+            >
+              Loop
+            </button>
+            <label className="flex items-center gap-2 text-xs text-white">
+              Speed
+              <input
+                type="range"
+                min="0.25"
+                max="2"
+                step="0.25"
+                value={animationSpeed}
+                onChange={(event) => setAnimationSpeed(Number(event.target.value))}
+                aria-label="Animation speed"
+              />
+            </label>
+          </>
+        )}
+        <button
+          type="button"
+          onClick={toggleFullscreen}
+          aria-label={isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'}
+          title={isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'}
+          className="ml-auto rounded-md bg-[#2A2F4C] p-2 text-white hover:bg-[#C89B3C] hover:text-black"
+        >
+          {isFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+        </button>
+      </div>
     </div>
   );
 };

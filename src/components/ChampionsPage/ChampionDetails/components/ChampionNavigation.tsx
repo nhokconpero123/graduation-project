@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -15,37 +15,27 @@ const ChampionNavigation = ({ currentChampion }: ChampionNavigationProps) => {
   const prevChampion = currentIndex > 0 ? champions[currentIndex - 1] : null;
   const nextChampion =
     currentIndex < champions.length - 1 ? champions[currentIndex + 1] : null;
+  const [isVisible, setIsVisible] = useState(window.scrollY < 50);
 
-  const [isVisible, setIsVisible] = useState(true);
+  const navigateToChampion = (championId: string) => {
+    setIsVisible(true);
+    navigate(`/champions/${championId}`);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
 
   useEffect(() => {
-    let lastScrollY = window.scrollY;
-
     const handleScroll = () => {
-      const currentScrollY = window.scrollY;
-
-      if (currentScrollY < 50) {
-        // Show the navigation when near the top
-        setIsVisible(true);
-      } else {
-        // Hide the navigation when scrolling down
-        setIsVisible(false);
-      }
-
-      lastScrollY = currentScrollY;
+      setIsVisible(window.scrollY < 50);
     };
 
     window.addEventListener('scroll', handleScroll);
-
-    return () => {
-      window.removeEventListener('scroll', handleScroll);
-    };
+    return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
   return (
     <div
       className={`fixed top-1/2 left-0 right-0 -translate-y-1/2 z-50 transition-opacity duration-300 ${
-        isVisible ? 'opacity-100' : 'opacity-0'
+        isVisible ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
       }`}
     >
       <div className="container mx-auto px-4 flex justify-between items-center">
@@ -53,11 +43,12 @@ const ChampionNavigation = ({ currentChampion }: ChampionNavigationProps) => {
         {prevChampion && (
           <motion.div
             initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: isVisible ? 1 : 0 }}
+            animate={{ opacity: isVisible ? 1 : 0, x: 0 }}
             className="pointer-events-auto"
           >
             <button
-              onClick={() => navigate(`/champions/${prevChampion.id}`)}
+              onClick={() => navigateToChampion(prevChampion.id)}
+              aria-label={`View previous champion: ${prevChampion.name}`}
               className="group flex items-center gap-3 bg-[#2A2F4C]/50 backdrop-blur-sm p-4 rounded-lg hover:bg-[#2A2F4C]/80 transition-colors"
             >
               <ChevronLeft className="w-6 h-6 text-[#C89B3C]" />
@@ -72,11 +63,12 @@ const ChampionNavigation = ({ currentChampion }: ChampionNavigationProps) => {
         {nextChampion && (
           <motion.div
             initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: isVisible ? 1 : 0 }}
+            animate={{ opacity: isVisible ? 1 : 0, x: 0 }}
             className="pointer-events-auto"
           >
             <button
-              onClick={() => navigate(`/champions/${nextChampion.id}`)}
+              onClick={() => navigateToChampion(nextChampion.id)}
+              aria-label={`View next champion: ${nextChampion.name}`}
               className="group flex items-center gap-3 bg-[#2A2F4C]/50 backdrop-blur-sm p-4 rounded-lg hover:bg-[#2A2F4C]/80 transition-colors"
             >
               <ChevronRight className="w-6 h-6 text-[#C89B3C]" />

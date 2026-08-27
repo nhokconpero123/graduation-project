@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronLeft, ChevronRight, X } from 'lucide-react';
 import { Champion } from '../../types';
@@ -10,6 +10,7 @@ interface ChampionSkinsProps {
 const ChampionSkins = ({ champion }: ChampionSkinsProps) => {
   const [currentSkin, setCurrentSkin] = useState(0);
   const [isFullScreen, setIsFullScreen] = useState(false);
+  const thumbnailCarouselRef = useRef<HTMLDivElement>(null);
 
   const skins = champion.skins || [
     {
@@ -25,6 +26,13 @@ const ChampionSkins = ({ champion }: ChampionSkinsProps) => {
 
   const prevSkin = () => {
     setCurrentSkin((prev) => (prev - 1 + skins.length) % skins.length);
+  };
+
+  const scrollThumbnails = (direction: 'left' | 'right') => {
+    thumbnailCarouselRef.current?.scrollBy({
+      left: direction === 'right' ? 240 : -240,
+      behavior: 'smooth'
+    });
   };
 
   return (
@@ -44,7 +52,7 @@ const ChampionSkins = ({ champion }: ChampionSkinsProps) => {
             <img
               src={skins[currentSkin].image}
               alt={skins[currentSkin].name}
-              className="w-full h-full object-cover"
+              className="w-full h-full object-cover object-top"
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black to-transparent" />
             
@@ -59,39 +67,51 @@ const ChampionSkins = ({ champion }: ChampionSkinsProps) => {
           </motion.div>
         </AnimatePresence>
 
-        <button
-          onClick={prevSkin}
-          className="absolute left-4 top-1/2 -translate-y-1/2 w-12 h-12 bg-black/50 rounded-full flex items-center justify-center text-white hover:bg-black/75 transition-colors"
-        >
-          <ChevronLeft className="w-6 h-6" />
-        </button>
-
-        <button
-          onClick={nextSkin}
-          className="absolute right-4 top-1/2 -translate-y-1/2 w-12 h-12 bg-black/50 rounded-full flex items-center justify-center text-white hover:bg-black/75 transition-colors"
-        >
-          <ChevronRight className="w-6 h-6" />
-        </button>
       </div>
 
-      <div className="grid grid-cols-6 gap-4 mt-6">
-        {skins.map((skin, index) => (
-          <motion.button
-            key={skin.name}
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={() => setCurrentSkin(index)}
-            className={`relative aspect-video rounded-lg overflow-hidden ${
-              currentSkin === index ? 'ring-2 ring-[#C89B3C]' : ''
-            }`}
-          >
-            <img
-              src={skin.image}
-              alt={skin.name}
-              className="w-full h-full object-cover"
-            />
-          </motion.button>
-        ))}
+      <div className="relative mt-6">
+        <button
+          type="button"
+          onClick={() => scrollThumbnails('left')}
+          aria-label="Scroll skins left"
+          className="absolute left-2 top-1/2 z-10 -translate-y-1/2 w-10 h-10 rounded-full bg-black/70 text-white flex items-center justify-center hover:bg-black transition-colors"
+        >
+          <ChevronLeft className="w-5 h-5" />
+        </button>
+
+        <div
+          ref={thumbnailCarouselRef}
+          className="hide-scrollbar flex gap-4 overflow-x-auto px-14 pb-3 snap-x snap-mandatory"
+        >
+          {skins.map((skin, index) => (
+            <motion.button
+              key={skin.name}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => setCurrentSkin(index)}
+              aria-label={`View ${skin.name} skin`}
+              aria-current={currentSkin === index ? 'true' : undefined}
+              className={`relative flex-none w-40 sm:w-52 aspect-video rounded-lg overflow-hidden snap-start ${
+                currentSkin === index ? 'ring-2 ring-[#C89B3C]' : ''
+              }`}
+            >
+              <img
+                src={skin.image}
+                alt={skin.name}
+                className="w-full h-full object-cover"
+              />
+            </motion.button>
+          ))}
+        </div>
+
+        <button
+          type="button"
+          onClick={() => scrollThumbnails('right')}
+          aria-label="Scroll skins right"
+          className="absolute right-2 top-1/2 z-10 -translate-y-1/2 w-10 h-10 rounded-full bg-black/70 text-white flex items-center justify-center hover:bg-black transition-colors"
+        >
+          <ChevronRight className="w-5 h-5" />
+        </button>
       </div>
 
       {/* Full Screen Modal */}
