@@ -1,3 +1,5 @@
+// App entry point. This keeps the router configuration centralized and easy to maintain
+// as the site grows, while the shared layout remains consistent across every page.
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Navigation from './components/Navigation';
 import Footer from './components/Footer';
@@ -11,21 +13,27 @@ import AramPage from './components/GameModes/AramPage/AramPage';
 import TFTPage from './components/GameModes/TFTPage/TFTPage';
 import HomePage from './components/HomePage';
 
+const appRoutes = [
+  { path: '/', element: <HomePage /> },
+  { path: '/about', element: <AboutPage /> },
+  { path: '/gameplay', element: <GameplayPage /> },
+  { path: '/how-to-play', element: <HowToPlayPage /> },
+  { path: '/community', element: <ContactPage /> },
+  { path: '/champions', element: <ChampionsPage /> },
+  { path: '/champions/:id', element: <ChampionDetailsPage /> },
+  { path: '/game-modes/aram', element: <AramPage /> },
+  { path: '/game-modes/tft', element: <TFTPage /> },
+];
+
 function App() {
   return (
     <Router>
       <div className="min-h-screen bg-[#1B1F38] text-white">
         <Navigation />
         <Routes>
-          <Route path="/" element={<HomePage />} />
-          <Route path="/about" element={<AboutPage />} />
-          <Route path="/gameplay" element={<GameplayPage />} />
-          <Route path="/how-to-play" element={<HowToPlayPage />} />
-          <Route path="/community" element={<ContactPage />} />
-          <Route path="/champions" element={<ChampionsPage />} />
-          <Route path="/champions/:id" element={<ChampionDetailsPage />} />
-          <Route path="/game-modes/aram" element={<AramPage />} />
-          <Route path="/game-modes/tft" element={<TFTPage />} />
+          {appRoutes.map(({ path, element }) => (
+            <Route key={path} path={path} element={element} />
+          ))}
         </Routes>
         <Footer />
       </div>
